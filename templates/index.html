@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#070a12">
+    <meta name="description" content="An interactive number guessing game. Pick a difficulty, read the clues, and find the secret number.">
+    <title>Numeris - Number Guessing Game</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script defer src="{{ url_for('static', filename='app.js') }}"></script>
+</head>
+<body>
+    <div class="ambient ambient-one" aria-hidden="true"></div>
+    <div class="ambient ambient-two" aria-hidden="true"></div>
+
+    <main class="shell">
+        <header class="topbar">
+            <a class="brand" href="/" aria-label="Numeris home">
+                <span class="brand-mark" aria-hidden="true">?</span>
+                <span class="brand-copy">
+                    <strong>NUMERIS</strong>
+                    <small>number guessing game</small>
+                </span>
+            </a>
+
+            <dl class="stats" aria-label="Your statistics">
+                <div>
+                    <dt>Games</dt>
+                    <dd id="stat-played">0</dd>
+                </div>
+                <div>
+                    <dt>Wins</dt>
+                    <dd id="stat-wins">0</dd>
+                </div>
+                <div>
+                    <dt>Streak</dt>
+                    <dd id="stat-streak">0</dd>
+                </div>
+                <div>
+                    <dt>Best</dt>
+                    <dd id="stat-best">&mdash;</dd>
+                </div>
+            </dl>
+        </header>
+
+        <section id="screen-start" class="screen start-screen" aria-labelledby="start-title">
+            <div class="hero">
+                <p class="eyebrow">A tiny game of intuition</p>
+                <h1 id="start-title">How few guesses<br><em>does it take?</em></h1>
+                <p class="lede">
+                    I am thinking of a number. Read the clues, narrow the range,
+                    and find it before you run out of guesses.
+                </p>
+                <p class="tip">
+                    <span class="tip-mark" aria-hidden="true">+</span>
+                    Split the range in half with every guess.
+                </p>
+                <p id="start-error" class="form-error start-error" role="alert" hidden></p>
+            </div>
+
+            <div class="difficulty-panel" aria-labelledby="difficulty-title">
+                <div class="panel-heading">
+                    <p class="eyebrow">Choose your challenge</p>
+                    <h2 id="difficulty-title">Pick a level</h2>
+                </div>
+
+                <div class="difficulty-grid" role="group" aria-label="Difficulty">
+                    {% for key, config in difficulties.items() %}
+                    <button
+                        class="difficulty-card"
+                        type="button"
+                        data-difficulty="{{ key }}"
+                        data-tone="{{ key }}"
+                    >
+                        <span class="difficulty-top">
+                            <span class="difficulty-index" aria-hidden="true">0{{ loop.index }}</span>
+                            <span class="difficulty-range">{{ config.min }}&ndash;{{ config.max }}</span>
+                        </span>
+                        <span class="difficulty-name">{{ config.label }}</span>
+                        <span class="difficulty-desc">{{ config.blurb }}</span>
+                        <span class="difficulty-meta">
+                            <span>{{ config.max_attempts }} guesses</span>
+                            <span class="card-arrow" aria-hidden="true">&rarr;</span>
+                        </span>
+                    </button>
+                    {% endfor %}
+                </div>
+            </div>
+        </section>
+
+        <section id="screen-game" class="screen game-screen is-hidden" aria-labelledby="game-title">
+            <div class="game-card">
+                <div class="game-heading">
+                    <div>
+                        <p class="eyebrow" id="game-difficulty">Easy &middot; 1&ndash;50</p>
+                        <h2 id="game-title">Find the secret number</h2>
+                    </div>
+                    <button id="change-difficulty" class="ghost-button" type="button">
+                        Quit round
+                    </button>
+                </div>
+
+                <div class="range-panel">
+                    <div class="range-block">
+                        <span class="range-caption">Possible range</span>
+                        <div class="range-values">
+                            <span id="range-low">1</span>
+                            <span class="range-dash" aria-hidden="true">&mdash;</span>
+                            <span id="range-high">50</span>
+                        </div>
+                    </div>
+                    <div class="attempt-block">
+                        <span class="range-caption">Guesses left</span>
+                        <div class="attempt-values">
+                            <strong id="attempts-left">8</strong>
+                            <span>of <span id="attempts-total">8</span></span>
+                        </div>
+                        <div class="attempt-meter" aria-hidden="true">
+                            <span id="attempt-meter-fill"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <form id="guess-form" class="guess-form" novalidate>
+                    <div class="input-wrap">
+                        <label class="sr-only" for="guess-input">Your guess</label>
+                        <span class="input-prefix" aria-hidden="true">#</span>
+                        <input
+                            id="guess-input"
+                            name="guess"
+                            type="number"
+                            inputmode="numeric"
+                            autocomplete="off"
+                            placeholder="?"
+                            required
+                        >
+                    </div>
+                    <button id="guess-button" class="primary-button" type="submit">
+                        Make a guess
+                    </button>
+                </form>
+                <p id="form-error" class="form-error" role="alert" hidden></p>
+
+                <div id="feedback" class="feedback" data-tone="idle" aria-live="polite">
+                    <span id="feedback-icon" class="feedback-icon" aria-hidden="true">?</span>
+                    <div class="feedback-copy">
+                        <p id="feedback-title" class="feedback-title">Make your first guess</p>
+                        <p id="feedback-detail" class="feedback-detail">
+                            The range is wide open. Start somewhere in the middle.
+                        </p>
+                    </div>
+                    <span id="temperature-badge" class="temperature-badge" hidden></span>
+                </div>
+
+                <div class="history">
+                    <div class="history-heading">
+                        <h3>Your guesses</h3>
+                        <span id="history-count">0</span>
+                    </div>
+                    <ol id="history-list" class="history-list"></ol>
+                    <p id="history-empty" class="history-empty">
+                        No guesses yet. The number is waiting.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <section id="screen-result" class="screen result-screen is-hidden" aria-labelledby="result-title">
+            <div id="result-card" class="result-card" data-result="won">
+                <div class="result-orbit" aria-hidden="true">
+                    <span id="result-number">?</span>
+                </div>
+                <p class="eyebrow" id="result-eyebrow">Round complete</p>
+                <h2 id="result-title" tabindex="-1">You got it.</h2>
+                <p id="result-copy" class="lede">
+                    You found the secret number.
+                </p>
+
+                <div class="result-stats">
+                    <div>
+                        <span>Secret number</span>
+                        <strong id="result-secret">42</strong>
+                    </div>
+                    <div>
+                        <span>Guesses used</span>
+                        <strong id="result-guesses">6</strong>
+                    </div>
+                    <div>
+                        <span>Win streak</span>
+                        <strong id="result-streak">1</strong>
+                    </div>
+                </div>
+
+                <div class="result-actions">
+                    <button id="play-again" class="primary-button" type="button">Play again</button>
+                    <button id="pick-level" class="ghost-button" type="button">Pick a new level</button>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <div id="confetti" class="confetti" aria-hidden="true"></div>
+</body>
+</html>
