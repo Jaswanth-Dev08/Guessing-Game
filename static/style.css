@@ -631,10 +631,6 @@ h1 em {
     appearance: none;
 }
 
-#guess-input::placeholder {
-    color: rgba(255, 255, 255, 0.18);
-}
-
 #guess-input:focus {
     border-color: rgba(110, 231, 255, 0.55);
     outline: none;

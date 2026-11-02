@@ -200,8 +200,6 @@ function renderGame(game, result) {
     if (guessInput) {
         guessInput.min = String(game.low);
         guessInput.max = String(game.high);
-        const midpoint = Math.floor((game.low + game.high) / 2);
-        guessInput.placeholder = game.low === game.high ? String(game.low) : `e.g. ${midpoint}`;
         guessInput.disabled = game.status !== "playing";
     }
     if (guessButton) guessButton.disabled = game.status !== "playing";
